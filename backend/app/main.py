@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
 from .routes import router
 
-# Create database tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -12,7 +11,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configure CORS for frontend access
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:3000", "*"],
@@ -21,7 +19,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routes
 app.include_router(router)
 
 @app.get("/")

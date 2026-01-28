@@ -1,10 +1,18 @@
 """
 AI-powered changelog generation using Gemini API.
 """
-import google.generativeai as genai
 import json
 import os
 from typing import Dict, List, Optional
+
+# Try new package first, fall back to deprecated one
+try:
+    from google import genai
+    from google.genai import types
+    USING_NEW_API = True
+except ImportError:
+    import google.generativeai as genai
+    USING_NEW_API = False
 
 
 def configure_gemini(api_key: Optional[str] = None):
@@ -15,13 +23,20 @@ def configure_gemini(api_key: Optional[str] = None):
             "Gemini API key not found. Set GEMINI_API_KEY environment variable "
             "or pass it via --api-key option."
         )
-    genai.configure(api_key=key)
+    
+    if USING_NEW_API:
+        # New API uses client-based configuration
+        return genai.Client(api_key=key)
+    else:
+        genai.configure(api_key=key)
+        return None
 
 
 def generate_changelog(
     commits_text: str,
     project_name: str = "this project",
     version: Optional[str] = None,
+    client=None,
 ) -> Dict:
     """
     Generate a changelog from commit text using Gemini AI.
@@ -30,12 +45,11 @@ def generate_changelog(
         commits_text: Formatted string of commits
         project_name: Name of the project for context
         version: Optional version number for this release
+        client: Gemini client (for new API)
     
     Returns:
         Dictionary with structured changelog data
     """
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    
     prompt = f"""You are a technical writer creating a changelog for end-users of a developer tool.
 
 Analyze the following git commits and create a user-friendly changelog. Focus on what matters to END USERS, not internal implementation details.
@@ -68,12 +82,18 @@ RULES:
 
 Return ONLY valid JSON, no markdown or explanation."""
 
-    response = model.generate_content(prompt)
-    
-    # Parse the response
     try:
-        # Try to extract JSON from the response
-        text = response.text.strip()
+        if USING_NEW_API and client:
+            response = client.models.generate_content(
+                model="gemini-flash-latest",
+                contents=prompt,
+            )
+            text = response.text.strip()
+        else:
+            model = genai.GenerativeModel("gemini-flash-latest")
+            response = model.generate_content(prompt)
+            text = response.text.strip()
+        
         # Remove markdown code blocks if present
         if text.startswith("```"):
             text = text.split("\n", 1)[1]
@@ -89,7 +109,19 @@ Return ONLY valid JSON, no markdown or explanation."""
             "changes": {
                 "features": [],
                 "bugfixes": [],
-                "improvements": [f"Raw response: {response.text[:500]}"],
+                "improvements": [f"Raw response: {text[:500] if 'text' in dir() else 'No response'}"],
+                "breaking": []
+            },
+            "error": str(e)
+        }
+    except Exception as e:
+        return {
+            "title": "Changelog Generation Error",
+            "summary": f"AI generation failed: {str(e)}",
+            "changes": {
+                "features": [],
+                "bugfixes": [],
+                "improvements": [],
                 "breaking": []
             },
             "error": str(e)

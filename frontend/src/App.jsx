@@ -78,7 +78,7 @@ function ChangelogList({ changelogs, loading, error }) {
         return (
             <div className="changelog-list">
                 <div className="error">
-                    <div className="error__icon">⚠️</div>
+                    <div className="error__icon">!</div>
                     <p className="error__message">Unable to load changelogs</p>
                     <p className="error__details">{error}</p>
                 </div>
@@ -90,7 +90,7 @@ function ChangelogList({ changelogs, loading, error }) {
         return (
             <div className="changelog-list">
                 <div className="changelog-list__empty">
-                    <div className="changelog-list__empty-icon">📋</div>
+                    <div className="changelog-list__empty-icon"></div>
                     <h3>No changelogs yet</h3>
                     <p>Use the CLI to generate and publish your first changelog!</p>
                 </div>
@@ -117,10 +117,10 @@ function ChangelogEntry({ changelog }) {
     });
 
     const categories = [
-        { key: 'features', label: 'New Features', icon: '✨' },
-        { key: 'improvements', label: 'Improvements', icon: '📈' },
-        { key: 'bugfixes', label: 'Bug Fixes', icon: '🐛' },
-        { key: 'breaking', label: 'Breaking Changes', icon: '⚠️' },
+        { key: 'features', label: 'New Features', icon: '+' },
+        { key: 'improvements', label: 'Improvements', icon: '^' },
+        { key: 'bugfixes', label: 'Bug Fixes', icon: 'x' },
+        { key: 'breaking', label: 'Breaking Changes', icon: '!' },
     ];
 
     const hasChanges = categories.some(

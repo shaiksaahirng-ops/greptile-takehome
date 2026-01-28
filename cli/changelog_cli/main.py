@@ -20,12 +20,10 @@ from .git_parser import find_git_repo, get_commits, format_commits_for_ai
 from .ai_generator import configure_gemini, generate_changelog, generate_version_suggestion
 from .api_client import publish_changelog, get_changelogs
 
-# Load environment variables from .env file
 load_dotenv()
 
 console = Console()
 
-# Store the last generated changelog for the publish command
 _last_changelog = None
 _last_commit_range = None
 
@@ -33,7 +31,7 @@ _last_commit_range = None
 @click.group()
 @click.version_option(version="1.0.0")
 def cli():
-    """🚀 AI-powered changelog generator using Gemini"""
+    """AI-powered changelog generator using Gemini"""
     pass
 
 
@@ -57,21 +55,21 @@ def generate(days, since, until, branch, version_str, project, api_key, publish,
         repo = find_git_repo()
     
     if not repo:
-        console.print("[red]❌ Not a git repository. Run this command from within a git project.[/red]")
+        console.print("[red]Error: Not a git repository. Run this command from within a git project.[/red]")
         raise SystemExit(1)
     
     repo_name = os.path.basename(repo.working_dir)
-    console.print(f"[green]✓[/green] Found repository: [bold]{repo_name}[/bold]")
+    console.print(f"Found repository: [bold]{repo_name}[/bold]")
     
     # Get commits
     with console.status("[bold blue]Fetching commits..."):
         commits, commit_range = get_commits(repo, days=days, since=since, until=until, branch=branch)
     
     if not commits:
-        console.print("[yellow]⚠ No commits found in the specified range.[/yellow]")
+        console.print("[yellow]No commits found in the specified range.[/yellow]")
         raise SystemExit(0)
     
-    console.print(f"[green]✓[/green] Found [bold]{len(commits)}[/bold] commits")
+    console.print(f"Found [bold]{len(commits)}[/bold] commits")
     _last_commit_range = commit_range
     
     # Show commits in dry-run mode
@@ -91,12 +89,12 @@ def generate(days, since, until, branch, version_str, project, api_key, publish,
     # Format commits and generate changelog
     commits_text = format_commits_for_ai(commits)
     
-    with console.status("[bold blue]🤖 Generating changelog with AI..."):
+    with console.status("[bold blue]Generating changelog with AI..."):
         try:
-            configure_gemini(api_key)
-            changelog_data = generate_changelog(commits_text, project_name=repo_name, version=version_str)
+            client = configure_gemini(api_key)
+            changelog_data = generate_changelog(commits_text, project_name=repo_name, version=version_str, client=client)
         except ValueError as e:
-            console.print(f"[red]❌ {e}[/red]")
+            console.print(f"[red]Error: {e}[/red]")
             raise SystemExit(1)
     
     _last_changelog = changelog_data
@@ -108,7 +106,7 @@ def generate(days, since, until, branch, version_str, project, api_key, publish,
     if output:
         with open(output, "w") as f:
             json.dump({"version": version_str, **changelog_data}, f, indent=2)
-        console.print(f"\n[green]✓[/green] Saved to [bold]{output}[/bold]")
+        console.print(f"\nSaved to [bold]{output}[/bold]")
     
     # Publish if requested
     if publish:
@@ -124,7 +122,7 @@ def publish(version_str, project, api_url):
     global _last_changelog, _last_commit_range
     
     if not _last_changelog:
-        console.print("[yellow]⚠ No changelog to publish. Run 'changelog generate' first.[/yellow]")
+        console.print("[yellow]No changelog to publish. Run 'changelog generate' first.[/yellow]")
         raise SystemExit(1)
     
     version = version_str or generate_version_suggestion([])
@@ -142,13 +140,13 @@ def do_publish(changelog_data, version, commit_range, project, api_url=None):
                 project_name=project,
                 api_url=api_url,
             )
-            console.print(f"\n[green]✓ Published![/green] Changelog ID: [bold]{result['id']}[/bold]")
+            console.print(f"\nPublished! Changelog ID: [bold]{result['id']}[/bold]")
             console.print(f"[dim]View at: http://localhost:5173[/dim]")
         except ConnectionError as e:
-            console.print(f"\n[red]❌ {e}[/red]")
+            console.print(f"\n[red]Error: {e}[/red]")
             raise SystemExit(1)
         except RuntimeError as e:
-            console.print(f"\n[red]❌ {e}[/red]")
+            console.print(f"\n[red]Error: {e}[/red]")
             raise SystemExit(1)
 
 
@@ -162,7 +160,7 @@ def list_changelogs(project, limit, api_url):
         try:
             changelogs = get_changelogs(project_name=project, limit=limit, api_url=api_url)
         except ConnectionError as e:
-            console.print(f"[red]❌ {e}[/red]")
+            console.print(f"[red]Error: {e}[/red]")
             raise SystemExit(1)
     
     if not changelogs:
@@ -187,7 +185,7 @@ def display_changelog(data: dict, version: str):
     console.print()
     
     # Title panel
-    title = f"📋 {data.get('title', 'Changelog')}"
+    title = data.get('title', 'Changelog')
     console.print(Panel(title, style="bold cyan", expand=False))
     
     # Summary
@@ -198,10 +196,10 @@ def display_changelog(data: dict, version: str):
     changes = data.get("changes", {})
     
     categories = [
-        ("features", "✨ New Features", "green"),
-        ("improvements", "📈 Improvements", "blue"),
-        ("bugfixes", "🐛 Bug Fixes", "yellow"),
-        ("breaking", "⚠️  Breaking Changes", "red"),
+        ("features", "New Features", "green"),
+        ("improvements", "Improvements", "blue"),
+        ("bugfixes", "Bug Fixes", "yellow"),
+        ("breaking", "Breaking Changes", "red"),
     ]
     
     for key, label, color in categories:
