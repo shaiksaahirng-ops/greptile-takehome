@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "changelog-cli"
+version = "1.0.0"
+description = "AI-powered changelog generator using Gemini"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "click>=8.1.0",
+    "gitpython>=3.1.0",
+    "google-generativeai>=0.3.0",
+    "requests>=2.31.0",
+    "rich>=13.7.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+changelog = "changelog_cli.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["."]
